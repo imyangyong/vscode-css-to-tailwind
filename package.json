@@ -1,0 +1,39 @@
+{
+  "name": "vscode-css-to-tailwind",
+  "displayName": "CssToTailwind",
+  "type": "module",
+  "version": "0.0.1",
+  "private": true,
+  "description": "CssToTailwind for VS Code",
+  "license": "MIT",
+  "homepage": "https://github.com/imyangyong/vscode-css-to-tailwind",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/imyangyong/vscode-css-to-tailwind"
+  },
+  "main": "./dist/index.cjs",
+  "preview": true,
+  "icon": "res/logo.png",
+  "engines": {
+    "vscode": "^1.71.0"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "esno ./scripts/dev.ts && tsup --watch src",
+    "publish": "esno ./scripts/publish.ts",
+    "prepare": "nr update",
+    "update": "vscode-ext-gen --scope=unocss --output src/generated/meta.ts",
+    "pack": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.71.0",
+    "find-up": "^6.3.0",
+    "jiti": "^2.4.2",
+    "prettier": "^2.8.8",
+    "tsup": "^8.3.5",
+    "vscode-ext-gen": "^0.5.5"
+  }
+}
