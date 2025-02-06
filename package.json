@@ -49,7 +49,7 @@
     "fs-extra": "^11.3.0",
     "jiti": "^2.4.2",
     "prettier": "^2.8.8",
-    "transform-to-tailwind": "^0.0.2",
+    "transform-to-tailwind": "^0.0.3",
     "tsup": "^8.3.5",
     "typescript": "^5.7.3",
     "vitest": "^3.0.4",

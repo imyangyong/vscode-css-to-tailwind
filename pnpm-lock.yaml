@@ -34,8 +34,8 @@ importers:
         specifier: ^2.8.8
         version: 2.8.8
       transform-to-tailwind:
-        specifier: ^0.0.2
-        version: 0.0.2
+        specifier: ^0.0.3
+        version: 0.0.3
       tsup:
         specifier: ^8.3.5
         version: 8.3.5(jiti@2.4.2)(postcss@8.5.1)(typescript@5.7.3)
@@ -779,8 +779,8 @@ packages:
   tr46@1.0.1:
     resolution: {integrity: sha512-dTpowEjclQ7Kgx5SdBkqRzVhERQXov8/l9Ft9dVM9fmg0W0KQSVaXX9T4i6twCPNtYiZM53lpSSUAwJbFPOHxA==}
 
-  transform-to-tailwind@0.0.2:
-    resolution: {integrity: sha512-Xooabpq1hrThhmEYFNkYsjkzGBFQlyBsng/3GIWLJCr21WtrrcmKmFrj6/p8lSfFTg888xS2BHgHvq8av70XoQ==}
+  transform-to-tailwind@0.0.3:
+    resolution: {integrity: sha512-gZeSYzzKeAdzf14CXBwItWeM4VYulNWvDyLan5H77tTnxTNA7kxAkLfZ3apei/Tjk5dwqMiryY9VwY7m2qu4Lg==}
 
   tree-kill@1.2.2:
     resolution: {integrity: sha512-L0Orpi8qGpRG//Nd+H90vFB+3iHnue1zSSGmNOOCh1GLJ7rUKVwV2HvijphGQS2UmhUZewS9VgvxYIdgr+fG1A==}
@@ -1532,7 +1532,7 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
-  transform-to-tailwind@0.0.2: {}
+  transform-to-tailwind@0.0.3: {}
 
   tree-kill@1.2.2: {}
 
