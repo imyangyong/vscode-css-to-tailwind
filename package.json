@@ -36,7 +36,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch src",
-    "publish": "esno ./scripts/publish.ts",
+    "publish": "vsce publish --no-dependencies",
     "prepare": "nr update",
     "update": "vscode-ext-gen --scope=CssToTailwind --output src/generated/meta.ts",
     "pack": "vsce package --no-dependencies"
@@ -45,6 +45,7 @@
     "@rollup/pluginutils": "^5.1.4",
     "@types/node": "^22.10.10",
     "@types/vscode": "^1.71.0",
+    "@vscode/vsce": "^3.2.2",
     "find-up": "^6.3.0",
     "fs-extra": "^11.3.0",
     "jiti": "^2.4.2",
