@@ -3,7 +3,7 @@
   "name": "css-to-tailwind",
   "displayName": "CssToTailwind",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "CssToTailwind for VS Code",
   "license": "MIT",
