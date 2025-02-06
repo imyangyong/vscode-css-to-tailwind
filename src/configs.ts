@@ -1,7 +1,6 @@
 import type { Disposable } from 'vscode'
 import type { ConfigShorthandTypeMap } from './generated/meta'
 import { languages, window, workspace } from 'vscode'
-import { defaultLanguageIds } from './constants'
 import { configs } from './generated/meta'
 
 export function getConfig(): ConfigShorthandTypeMap & {
@@ -46,19 +45,4 @@ async function validateLanguages(targets: string[], allLanguages: string[]) {
     window.showWarningMessage(`These language configurations are illegal: ${invalidLanguages.join(',')}`)
 
   return validLanguages
-}
-
-export async function getLanguageIds() {
-  const allLanguages = await languages.getLanguages()
-  const languagesIds: string[] = getConfig().languageIds || []
-
-  return Array.from(
-    new Set(
-      [
-        ...defaultLanguageIds,
-        ...await validateLanguages(languagesIds, allLanguages),
-      ]
-        .filter(i => allLanguages.includes(i)),
-    ),
-  )
 }

@@ -1,170 +1,130 @@
-import type { FilterPattern } from '@rollup/pluginutils'
-import type { ExtensionContext, StatusBarItem } from 'vscode'
-import path, { dirname } from 'path'
-import process from 'process'
-import { defaultPipelineExclude, defaultPipelineInclude } from '#integration/defaults'
-import { createFilter } from '@rollup/pluginutils'
-import { toArray } from '@unocss/core'
-import { findUp } from 'find-up'
-import { commands, Position, StatusBarAlignment, window, workspace } from 'vscode'
-import { getConfig } from './configs'
-import { ContextLoader } from './contextLoader'
-import { commands as commandNames, displayName, version } from './generated/meta'
+import type { TextEditorDecorationType, ExtensionContext, DecorationRenderOptions } from 'vscode'
+import * as vscode from 'vscode'
 import { log } from './log'
+import { workspace } from 'vscode'
+import { CssToTailwindProcess } from './process'
+import { LRUCache } from '@imyangyong/utils'
+import { version } from './generated/meta'
 
-const skipMap = {
-  '<!-- @unocss-skip -->': ['<!-- @unocss-skip-start -->\n', '\n<!-- @unocss-skip-end -->'],
-  '/* @unocss-skip */': ['/* @unocss-skip-start */\n', '\n/* @unocss-skip-end */'],
-  '// @unocss-skip': ['// @unocss-skip-start\n', '\n// @unocss-skip-end'],
+function createStyle(options: DecorationRenderOptions) {
+  return vscode.window.createTextEditorDecorationType({ rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed, ...options })
 }
 
-export async function activate(ext: ExtensionContext) {
-  // Neither Jiti2 nor Tsx supports running in VS Code yet
-  // We have to use Jiti1 for now
-  process.env.IMPORTX_LOADER = 'jiti-v1'
+function createPosition(pos: [number, number]): vscode.Position {
+  return new vscode.Position(pos[0], pos[1])
+}
 
-  log.appendLine(`⚪️ UnoCSS for VS Code v${version}\n`)
+function createRange(start: [number, number], end: [number, number]): vscode.Range {
+  return new vscode.Range(createPosition(start), createPosition(end))
+}
 
-  const projectPath = workspace.workspaceFolders?.[0].uri.fsPath
-  if (!projectPath) {
-    log.appendLine('➖ No active workspace found, UnoCSS is disabled')
-    return
-  }
+const cacheMap = new LRUCache(5000)
+export let decorationType: TextEditorDecorationType
+export async function activate(context: ExtensionContext) {
+  log.appendLine(`⚪️ Css To Tailwind for VS Code v${version}\n`)
 
-  const config = getConfig()
-  if (config.disable) {
+  const config = workspace.getConfiguration('CssToTailwind')
+  const disabled = config.get<boolean>('disable', false)
+  if (disabled) {
     log.appendLine('➖ Disabled by configuration')
     return
   }
+  const process = new CssToTailwindProcess()
+  const LANS = ['html', 'javascriptreact', 'typescript', 'typescriptreact', 'vue', 'svelte', 'solid', 'swan', 'react', 'js', 'ts', 'tsx', 'jsx', 'wxml', 'axml', 'css', 'wxss', 'acss', 'less', 'scss', 'sass', 'stylus', 'wxss', 'acss']
+  const md = new vscode.MarkdownString()
+  md.isTrusted = true
+  md.supportHtml = true
+  const style = {
+    dark: {
+      textDecoration: 'none; border-bottom: 1px dashed currentColor',
+    },
+    light: {
+      textDecoration: 'none; border-bottom: 1px dashed currentColor',
+    },
+  }
+  decorationType = createStyle(style)
 
-  const status = window.createStatusBarItem(StatusBarAlignment.Right, 200)
-  status.text = displayName
-
-  const root = config.root
-
-  const loader = await rootRegister(
-    ext,
-    Array.isArray(root) && !root.length
-      ? [projectPath]
-      : root
-        ? toArray(root).map(r => path.resolve(projectPath, r))
-        : [projectPath],
-    status,
-  )
-
-  ext.subscriptions.push(
-    commands.registerCommand(
-      commandNames.reload,
-      async () => {
-        log.appendLine('🔁 Reloading...')
-        await loader.reload()
-        log.appendLine('✅ Reloaded.')
-      },
-    ),
-    commands.registerCommand(
-      commandNames.insertSkipAnnotation,
-      async () => {
-        const activeTextEditor = window.activeTextEditor
-        if (!activeTextEditor)
-          return
-        const selection = activeTextEditor.selection
-        if (!selection)
-          return
-        // pick <!-- @unocss-skip-start --> or // @unocss-skip-start
-        const key = await window.showQuickPick(Object.keys(skipMap))
-        if (!key)
-          return
-        const [insertStart, insertEnd] = skipMap[key as keyof typeof skipMap]
-        activeTextEditor.edit((builder) => {
-          builder.insert(new Position(selection.start.line, 0), insertStart)
-          builder.insert(selection.end, insertEnd)
-        })
-      },
-    ),
-  )
-}
-
-async function rootRegister(
-  ext: ExtensionContext,
-  root: string[],
-  status: StatusBarItem,
-) {
-  log.appendLine('📂 roots search mode.')
-
-  const config = getConfig()
-
-  const include: FilterPattern = config.include || defaultPipelineInclude
-  const exclude: FilterPattern = config.exclude || [/[\\/](node_modules|dist|\.temp|\.cache|\.vscode)[\\/]/, ...defaultPipelineExclude]
-  const filter = createFilter(include, exclude)
-
-  const ctx = new ContextLoader(root[0], ext, status)
-  await ctx.ready
-
-  const cacheFileLookUp = new Set<string>()
-
-  const rootCache = new Set<string>()
-
-  const watcher = workspace.createFileSystemWatcher('**/{uno,unocss}.config.{js,ts}')
-
-  ext.subscriptions.push(watcher.onDidChange(async (uri) => {
-    const dir = dirname(uri.fsPath)
-    await ctx.unloadContext(dir)
-    await ctx.loadContextInDirectory(dir)
+  // 移除装饰器
+  context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(() => vscode.window.activeTextEditor?.setDecorations(decorationType, [])))
+  context.subscriptions.push(vscode.window.onDidChangeTextEditorVisibleRanges(() => {
+    vscode.window.activeTextEditor?.setDecorations(decorationType, [])
+  }))
+  context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(({ reason, contentChanges, document }) => {
+    if (document.languageId === 'Log' || !contentChanges.length)
+      return
+    vscode.window.activeTextEditor?.setDecorations(decorationType, [])
   }))
 
-  ext.subscriptions.push(watcher.onDidDelete((uri) => {
-    const dir = dirname(uri.fsPath)
-    rootCache.delete(dir)
-    ctx.unloadContext(dir)
-    cacheFileLookUp.clear()
-  }))
+  let disposable = vscode.commands.registerCommand('CssToTailwind.copyToClipboard', (text) => {
+    const decodedText = decodeURIComponent(text)
+    vscode.env.clipboard.writeText(decodedText)
+    vscode.window.showInformationMessage(`已复制到剪贴板: ${decodedText}`)
+  });
+  context.subscriptions.push(disposable);
 
-  const configNames = [
-    'uno.config.js',
-    'uno.config.ts',
-    'unocss.config.js',
-    'unocss.config.ts',
-  ]
-
-  const registerUnocss = async (url = window.activeTextEditor?.document.uri.fsPath) => {
-    if (!url)
+  // style to tailwind hover事件
+  context.subscriptions.push(vscode.languages.registerHoverProvider(LANS, {
+    provideHover(document, position) {
+    // 获取当前选中的文本范围
+    const editor = vscode.window.activeTextEditor
+    if (!editor)
       return
-
-    if (cacheFileLookUp.has(url))
+    // 移除样式
+    editor.setDecorations(decorationType, [])
+    let realRange: { content: string, range: vscode.Range } | undefined
+    const range = document.getWordRangeAtPosition(position) as any
+    if (!range)
       return
-
-    if (!filter(url))
+    let word = document.getText(range)
+    if (!word)
       return
-
-    cacheFileLookUp.add(url)
-
-    // root has been created
-    if ([...rootCache].some(root => url.startsWith(root)))
+    const line = range.c.c
+    const lineNumber = position.line
+    const lineText = document.lineAt(lineNumber).text
+    if (lineText.indexOf(':') < 1)
       return
+    const wholeReg = new RegExp(`([\\w\\-]+\\s*:\\s)?([\\w\\-\\[\\(\\!]+)?${word}(:*\\s*[^:"}{\`;>]+)?`, 'g')
+    for (const match of lineText.matchAll(wholeReg)) {
+      log.appendLine(JSON.stringify(match))
+      const { index } = match
+      const pos = index! + match[0].indexOf(word)
+      if (pos === range?.c?.e) {
+        word = match[0]
+        realRange = {
+          content: match[0],
+          range: createRange([line, index!], [line, index! + match[0].length]),
+        }
+        break
+      }
+    }
+    const hoverText = word.replace(/'/g, '').trim()
 
-    const configUrl = await findUp(configNames, { cwd: url })
-
-    if (!configUrl)
+    if (!hoverText || !/[\w\-]+\s*:[^.]+/.test(hoverText) || !realRange)
       return
+    const key = `${hoverText}`
+    if (cacheMap.has(key))
+      return setStyle(cacheMap.get(key), [realRange.range])
+    const hoverTailwindText = process.convert(hoverText)
+    if (!hoverTailwindText)
+      return
+    // 设置缓存
+    cacheMap.set(key, hoverTailwindText)
 
-    const cwd = path.dirname(configUrl)
-    // Prevent sub-repositories from having the same naming prefix
-    rootCache.add(`${cwd}/`)
+    return setStyle(hoverTailwindText, [realRange.range])
+  }}))
 
-    await ctx.loadContextInDirectory(cwd)
+  function setStyle(selectedTailwindText: string, rangeMap: vscode.Range[]) {
+    md.value = ''
+    // 增加decorationType样式
+    vscode.window.activeTextEditor?.setDecorations(decorationType, rangeMap)
+
+    const copyIcon = `<sub><img width='14' height='14' src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxZW0iIGhlaWdodD0iMWVtIiB2aWV3Qm94PSIwIDAgMjQgMjQiPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2UyOWNkMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utd2lkdGg9IjEuNSI+PHBhdGggZD0iTTIwLjk5OCAxMGMtLjAxMi0yLjE3NS0uMTA4LTMuMzUzLS44NzctNC4xMjFDMTkuMjQzIDUgMTcuODI4IDUgMTUgNWgtM2MtMi44MjggMC00LjI0MyAwLTUuMTIxLjg3OUM2IDYuNzU3IDYgOC4xNzIgNiAxMXY1YzAgMi44MjggMCA0LjI0My44NzkgNS4xMjFDNy43NTcgMjIgOS4xNzIgMjIgMTIgMjJoM2MyLjgyOCAwIDQuMjQzIDAgNS4xMjEtLjg3OUMyMSAyMC4yNDMgMjEgMTguODI4IDIxIDE2di0xIi8+PHBhdGggZD0iTTMgMTB2NmEzIDMgMCAwIDAgMyAzTTE4IDVhMyAzIDAgMCAwLTMtM2gtNEM3LjIyOSAyIDUuMzQzIDIgNC4xNzIgMy4xNzJDMy41MTggMy44MjUgMy4yMjkgNC43IDMuMTAyIDYiLz48L2c+PC9zdmc+' /></sub>`
+    const encodedText = encodeURIComponent(selectedTailwindText)
+    md.appendMarkdown(`Css To Tailwind: **${selectedTailwindText}** <a href='command:CssToTailwind.copyToClipboard?${JSON.stringify([encodedText])}'>${copyIcon}</a>\n`)
+    return new vscode.Hover(md)
   }
-
-  try {
-    await Promise.all(root.map(registerUnocss))
-    // Take effect immediately on the current file
-    registerUnocss()
-    ext.subscriptions.push(window.onDidChangeActiveTextEditor(() => registerUnocss()))
-  }
-  catch (e: any) {
-    log.appendLine(String(e.stack ?? e))
-  }
-
-  return ctx
 }
 
-export function deactivate() { }
+export function deactivate() {
+  cacheMap.clear()
+}

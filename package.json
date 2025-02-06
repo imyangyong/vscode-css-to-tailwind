@@ -1,5 +1,6 @@
 {
-  "name": "vscode-css-to-tailwind",
+  "publisher": "imyangyong",
+  "name": "css-to-tailwind",
   "displayName": "CssToTailwind",
   "type": "module",
   "version": "0.0.1",
@@ -17,23 +18,44 @@
   "engines": {
     "vscode": "^1.71.0"
   },
+  "contributes": {
+    "configuration": {
+      "properties": {
+        "CssToTailwind.disable": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disable the css-to-tailwind extension"
+        }
+      }
+    },
+    "commands": []
+  },
   "activationEvents": [
     "onStartupFinished"
   ],
   "scripts": {
     "build": "tsup",
-    "dev": "esno ./scripts/dev.ts && tsup --watch src",
+    "dev": "tsup --watch src",
     "publish": "esno ./scripts/publish.ts",
     "prepare": "nr update",
-    "update": "vscode-ext-gen --scope=unocss --output src/generated/meta.ts",
+    "update": "vscode-ext-gen --scope=CssToTailwind --output src/generated/meta.ts",
     "pack": "vsce package --no-dependencies"
   },
   "devDependencies": {
+    "@rollup/pluginutils": "^5.1.4",
+    "@types/node": "^22.10.10",
     "@types/vscode": "^1.71.0",
     "find-up": "^6.3.0",
+    "fs-extra": "^11.3.0",
     "jiti": "^2.4.2",
     "prettier": "^2.8.8",
+    "transform-to-tailwind": "^0.0.2",
     "tsup": "^8.3.5",
-    "vscode-ext-gen": "^0.5.5"
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.4",
+    "vscode-ext-gen": "^1.0.0"
+  },
+  "dependencies": {
+    "@imyangyong/utils": "^0.10.0"
   }
 }

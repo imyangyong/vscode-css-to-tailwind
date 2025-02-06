@@ -1,13 +1,29 @@
 <br>
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/unocss/unocss/main/packages/vscode/res/logo.png" style="width:100px;" height="128" />
+<img src="https://raw.githubusercontent.com/imyangyong/vscode-css-to-tailwind/main/res/logo.png" style="width:100px;" height="128" />
 </p>
 
 <h1 align="center">CssToTailwind for VS Code</h1>
 
-<br>
 
+## Configurations
+
+<!-- configs -->
+
+| Key                     | Description                           | Type      | Default |
+| ----------------------- | ------------------------------------- | --------- | ------- |
+| `CssToTailwind.disable` | Disable the css-to-tailwind extension | `boolean` | `false` |
+
+<!-- configs -->
+
+## Commands
+
+<!-- commands -->
+
+**No data**
+
+<!-- commands -->
 
 ## License
 
