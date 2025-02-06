@@ -8,7 +8,7 @@
 
 You can quickly see how to convert CSS code to Tailwind CSS.
 
-<video src="https://raw.githubusercontent.com/imyangyong/vscode-css-to-tailwind/main/res/Snapshot.mp4"></video>
+![Video](https://raw.githubusercontent.com/imyangyong/vscode-css-to-tailwind/main/res/Snapshot.gif)
 
 ## Configurations
 
